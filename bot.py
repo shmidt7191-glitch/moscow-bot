@@ -42,6 +42,7 @@ async def ask_ai(prompt: str) -> str:
             headers={
                 "Authorization": f"Bearer {OPENROUTER_API_KEY}",
                 "Content-Type": "application/json",
+                "HTTP-Referer": "https://github.com/moscow-bot",
             },
             json={
                 "model": "mistralai/mistral-7b-instruct:free",
@@ -52,7 +53,16 @@ async def ask_ai(prompt: str) -> str:
             }
         )
         data = resp.json()
-        return data["choices"][0]["message"]["content"]
+        logger.info(f"OpenRouter status: {resp.status_code}")
+        logger.info(f"OpenRouter response keys: {list(data.keys())}")
+        if "choices" in data:
+            return data["choices"][0]["message"]["content"]
+        elif "error" in data:
+            logger.error(f"OpenRouter error: {data['error']}")
+            return "Что-то пошло не так 😔 Попробуй ещё раз."
+        else:
+            logger.error(f"Unexpected response: {data}")
+            return "Что-то пошло не так 😔 Попробуй ещё раз."
 
 def make_keyboard():
     keyboard = [
