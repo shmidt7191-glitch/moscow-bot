@@ -8,7 +8,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
-OPENROUTER_API_KEY = os.environ["OPENROUTER_API_KEY"]
+CLOUDRU_API_KEY = os.environ["CLOUDRU_API_KEY"]
 
 SYSTEM_PROMPT = """Ты агент по подбору досуга в Москве и ближнем Подмосковье.
 
@@ -38,14 +38,14 @@ MOOD_PROMPTS = {
 async def ask_ai(prompt: str) -> str:
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.post(
-            "https://openrouter.ai/api/v1/chat/completions",
+            "https://foundation-models.api.cloud.ru/v1/chat/completions",
             headers={
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Authorization": f"Bearer {CLOUDRU_API_KEY}",
                 "Content-Type": "application/json",
-                "HTTP-Referer": "https://github.com/moscow-bot",
             },
             json={
-                "model": "mistralai/mistral-7b-instruct:free",
+                "model": "ai-sage/GigaChat3-10B-A1.8B",
+                "max_tokens": 1000,
                 "messages": [
                     {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "user", "content": prompt},
@@ -53,12 +53,12 @@ async def ask_ai(prompt: str) -> str:
             }
         )
         data = resp.json()
-        logger.info(f"OpenRouter status: {resp.status_code}")
-        logger.info(f"OpenRouter response keys: {list(data.keys())}")
+        logger.info(f"Cloud.ru status: {resp.status_code}")
+        logger.info(f"Cloud.ru response keys: {list(data.keys())}")
         if "choices" in data:
             return data["choices"][0]["message"]["content"]
         elif "error" in data:
-            logger.error(f"OpenRouter error: {data['error']}")
+            logger.error(f"Cloud.ru error: {data['error']}")
             return "Что-то пошло не так 😔 Попробуй ещё раз."
         else:
             logger.error(f"Unexpected response: {data}")
