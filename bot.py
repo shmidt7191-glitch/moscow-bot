@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
 CLOUDRU_API_KEY = os.environ["CLOUDRU_API_KEY"]
 
-HOME = "ул. Декабристов 10к3, Москва"
+HOME = "ул. Декабристов 10к3, Москва (ближайшее метро — Автозаводская или Технопарк)"
 WORK = "метро Улица 1905 года, Москва"
 
 CHOOSING_START = 1
@@ -29,18 +29,16 @@ async def get_weather() -> str:
                     "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode",
                     "timezone": "Europe/Moscow",
                     "forecast_days": 7,
-                    "language": "ru"
                 }
             )
             data = resp.json()
             daily = data["daily"]
-            codes = {0:"ясно",1:"почти ясно",2:"переменная облачность",3:"пасмурно",
-                     45:"туман",48:"туман",51:"морось",53:"морось",55:"морось",
-                     61:"дождь",63:"дождь",65:"сильный дождь",71:"снег",73:"снег",
-                     75:"сильный снег",80:"ливень",81:"ливень",82:"сильный ливень",
-                     95:"гроза",96:"гроза с градом",99:"гроза с градом"}
+            codes = {0:"☀️ ясно",1:"🌤 почти ясно",2:"⛅ переменная облачность",3:"☁️ пасмурно",
+                     45:"🌫 туман",48:"🌫 туман",51:"🌦 морось",53:"🌦 морось",55:"🌦 морось",
+                     61:"🌧 дождь",63:"🌧 дождь",65:"🌧 сильный дождь",71:"🌨 снег",73:"🌨 снег",
+                     80:"🌧 ливень",81:"🌧 ливень",82:"⛈ сильный ливень",95:"⛈ гроза"}
             days_ru = ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"]
-            result = "🌤 Погода в Москве на неделю:\n"
+            result = "🌤 Погода на неделю:\n"
             from datetime import datetime
             for i in range(7):
                 date = datetime.strptime(daily["time"][i], "%Y-%m-%d")
@@ -49,8 +47,8 @@ async def get_weather() -> str:
                 tmin = round(daily["temperature_2m_min"][i])
                 rain = daily["precipitation_sum"][i]
                 code = daily["weathercode"][i]
-                weather = codes.get(code, "переменно")
-                rain_str = f", дождь {rain}мм" if rain > 1 else ""
+                weather = codes.get(code, "⛅ переменно")
+                rain_str = f", осадки {rain}мм" if rain > 1 else ""
                 result += f"{dow} {date.strftime('%d.%m')}: {tmin}..+{tmax}°, {weather}{rain_str}\n"
             return result
     except Exception as e:
@@ -66,7 +64,7 @@ async def ask_ai(prompt: str, system: str) -> str:
                 "Content-Type": "application/json",
             },
             json={
-                "model": "ai-sage/GigaChat3-10B-A1.8B",
+                "model": "ai-sage/GigaChat-2-Max",
                 "max_tokens": 1500,
                 "temperature": 0.7,
                 "messages": [
@@ -83,30 +81,29 @@ async def ask_ai(prompt: str, system: str) -> str:
             logger.error(f"Unexpected: {data}")
             return None
 
-SYSTEM_PROMPT = """Ты — дружелюбный помощник по досугу в Москве и Подмосковье. Тебя зовут «Выходной бот».
+SYSTEM_PROMPT = """Ты — помощник по досугу в Москве и Подмосковье. Тебя зовут «Выходной бот».
 
-ВАЖНЫЕ ПРАВИЛА:
-- Пиши живым, человечным языком. Никакого канцелярита и AI-мусора.
-- Предлагай РОВНО 3 варианта, не больше.
-- У пользователя НЕТ автомобиля — только метро, МЦК, электрички, автобусы, трамваи.
-- Никогда не предлагай варианты с личным авто или такси как основной транспорт.
-- Для каждого места указывай ТОЧНЫЙ адрес.
-- Маршрут от стартовой точки — конкретный: какое метро, какой выход, сколько минут пешком.
-- Учитывай погоду при рекомендациях (если дождь — предлагай крытые места).
-- Пиши кратко и по делу. Каждый вариант — максимум 5-6 строк.
+СТРОГИЕ ПРАВИЛА:
+1. Предлагай РОВНО 3 варианта.
+2. У пользователя НЕТ автомобиля — только метро, МЦК, электрички, автобусы, трамваи.
+3. Пиши живым человеческим языком, без канцелярита.
+4. Для каждого места указывай ТОЧНЫЙ адрес — только если ты уверен в нём на 100%. Если не уверен — не пиши адрес вообще, лучше пропустить.
+5. Маршрут от стартовой точки: конкретная станция метро, КОНКРЕТНЫЙ выход (например "выход №3 на Садовое кольцо"), сколько минут пешком.
+6. НЕ пиши банальных советов про зонт, одежду по погоде и прочее очевидное.
+7. Учитывай погоду при выборе мест: если дождь — предлагай крытые места.
 
 ФОРМАТ каждого варианта:
-🗺 **Название** — Точный адрес
-Описание (2-3 живых предложения)
-🚇 Маршрут от [стартовая точка]: конкретные детали
-💡 Совет"""
+🗺 **Название**
+Адрес: [точный адрес или пропустить если не уверен]
+[2-3 живых предложения об атмосфере и что там делать]
+🚇 [конкретный маршрут с выходом из метро и минутами пешком]"""
 
 MOOD_PROMPTS = {
     "walk": "пешая прогулка по красивым местам Москвы",
-    "cafe": "уютная кофейня с атмосферой, не сетевая, для чтения книги или отдыха",
-    "book": "место где приятно читать книгу — тихий парк, библиотека, антикварный книжный",
-    "outside": "ближнее Подмосковье, только на электричке или автобусе",
-    "surprise": "что-то необычное, чего обычный москвич может не знать",
+    "cafe": "уютная кофейня не из сетевых, с атмосферой — для чтения или отдыха",
+    "book": "тихое атмосферное место с книгой — парк, библиотека или книжный магазин",
+    "outside": "ближнее Подмосковье, добраться только на электричке или автобусе",
+    "surprise": "необычное место которое обычный москвич не знает",
 }
 
 MOOD_LABELS = {
@@ -131,6 +128,7 @@ def mood_keyboard():
         [InlineKeyboardButton(MOOD_LABELS["book"], callback_data="mood_book"),
          InlineKeyboardButton(MOOD_LABELS["outside"], callback_data="mood_outside")],
         [InlineKeyboardButton(MOOD_LABELS["surprise"], callback_data="mood_surprise")],
+        [InlineKeyboardButton("📍 Сменить точку старта", callback_data="restart")],
     ])
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -148,17 +146,11 @@ async def handle_start_point(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     if query.data == "start_home":
         user_start[uid] = HOME
-        await query.edit_message_text(
-            f"Стартуем от дома 🏠\n\nЧто хочешь сегодня?",
-            reply_markup=mood_keyboard()
-        )
+        await query.edit_message_text("Стартуем от дома 🏠\n\nЧто хочешь сегодня?", reply_markup=mood_keyboard())
         return CHOOSING_MOOD
     elif query.data == "start_work":
         user_start[uid] = WORK
-        await query.edit_message_text(
-            f"Стартуем с работы 💼\n\nЧто хочешь сегодня?",
-            reply_markup=mood_keyboard()
-        )
+        await query.edit_message_text("Стартуем с работы 💼\n\nЧто хочешь сегодня?", reply_markup=mood_keyboard())
         return CHOOSING_MOOD
     elif query.data == "start_custom":
         await query.edit_message_text("Напиши свой адрес или станцию метро:")
@@ -168,7 +160,7 @@ async def handle_custom_address(update: Update, context: ContextTypes.DEFAULT_TY
     uid = update.message.from_user.id
     user_start[uid] = update.message.text
     await update.message.reply_text(
-        f"Отлично, стартуем от: {update.message.text}\n\nЧто хочешь сегодня?",
+        f"Стартуем от: {update.message.text}\n\nЧто хочешь сегодня?",
         reply_markup=mood_keyboard()
     )
     return CHOOSING_MOOD
@@ -186,9 +178,9 @@ async def handle_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mood_desc = MOOD_PROMPTS.get(mood_key, "интересный досуг")
 
     prompt = f"""Найди 3 варианта для: {mood_desc}
-Стартовая точка пользователя: {start_point}
+Стартовая точка: {start_point}
 {weather}
-Учти погоду при выборе мест. Пиши маршрут именно от указанной стартовой точки."""
+Учти погоду. Маршрут пиши именно от указанной стартовой точки с конкретным выходом из метро."""
 
     try:
         response_text = await ask_ai(prompt, SYSTEM_PROMPT)
@@ -201,29 +193,22 @@ async def handle_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.edit_message_text(
         response_text,
         parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("🔄 Ещё варианты", callback_data=f"mood_{mood_key}")],
-            [InlineKeyboardButton("🏠 Сменить точку старта", callback_data="restart")],
-        ])
+        reply_markup=mood_keyboard()
     )
     return CHOOSING_MOOD
 
 async def handle_restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    await query.edit_message_text(
-        "Откуда стартуем?",
-        reply_markup=start_keyboard()
-    )
+    await query.edit_message_text("Откуда стартуем?", reply_markup=start_keyboard())
     return CHOOSING_START
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("До встречи! Напиши /start когда захочешь найти куда сходить 👋")
+    await update.message.reply_text("До встречи! Напиши /start когда захочешь 👋")
     return ConversationHandler.END
 
 def main():
     app = Application.builder().token(TELEGRAM_TOKEN).build()
-
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
@@ -239,9 +224,7 @@ def main():
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
-
     app.add_handler(conv_handler)
-    app.add_handler(CommandHandler("start", start))
     logger.info("Выходной бот запущен!")
     app.run_polling(drop_pending_updates=True)
 
