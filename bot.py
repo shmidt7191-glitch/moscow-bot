@@ -64,7 +64,7 @@ async def ask_ai(prompt: str, system: str) -> str:
                 "Content-Type": "application/json",
             },
             json={
-                "model": "ai-sage/GigaChat-2-Max",
+                "model": "deepseek-ai/DeepSeek-V3",
                 "max_tokens": 1500,
                 "temperature": 0.7,
                 "messages": [
